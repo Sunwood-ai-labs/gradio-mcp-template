@@ -151,16 +151,19 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           # Codexに計画を立てさせ、issueにコメントさせる
-          codex --full-auto  --quiet  --model o3   "以下のissueに対する対応計画を立て、ghコマンドでコメントしてください：
+          codex --full-auto --quiet --model o3 "以下のissueに対する対応計画を立て、ghコマンドでコメントしてください：
           
           Issue番号: #${{ github.event.issue.number }}
           タイトル: ${{ github.event.issue.title }}
-          内容: ${{ github.event.issue.body }}
+          
+          # 重要：Issue本文をエスケープして渡す
+          本文: $(echo '${{ github.event.issue.body }}' | sed 's/\$/\\$/g' | sed 's/`/\\`/g')
           
           実行してください：
-          1. issueを分析して対応方針を決定
-          2. ghコマンドで計画をissueにコメント (例: gh issue comment #番号 --body '内容')
-          3. 必要なコード修正やドキュメント更新を実施
+          1. issueを分析して対応方針やTODOを決定
+          2. ghコマンドで計画・TODOをissueにコメント (必ず --body-file を使用)
+          3. 必要なコード修正やドキュメント更新を実施"
+          4. comment.txt を確認してちゃんとタスクが完了しているか確認
           
           # 重要：複雑な文字列を扱う際は、エスケープ問題を避けるために一時ファイルを使用してください。
           # 例えば、gh issue comment や gh pr create コマンドでは --body よりも --body-file を使用してください。
