@@ -34,7 +34,7 @@ jobs:
         run: |
           # プロンプトを一時ファイルに保存
           cat > prompt.txt << 'EOF'
-          このIssueを分析して、最も適切なラベルを選んで付けてください：
+          このIssueを分析して、最も適切なラベルを選んで、ghコマンドでラベルを付けてください：
           
           Issue番号: #${{ github.event.issue.number }}
           タイトル: ${{ github.event.issue.title }}
