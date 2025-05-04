@@ -32,8 +32,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # Codexに必要なラベルを作成・確認してから、issueにラベルを付与させる
-          codex --full-auto  --quiet  --model o3  "以下の手順で実行してください：
+          # プロンプトを一時ファイルに保存
+          cat > prompt.txt << 'EOF'
+          以下の手順で実行してください：
           
           Issue番号: #${{ github.event.issue.number }}
           タイトル: ${{ github.event.issue.title }}
@@ -54,4 +55,8 @@ jobs:
           （例：バグの場合は'bug'、ドキュメントの場合は'documentation'）
           
           4. 最後に現在のラベル一覧を表示：
-          gh label list"
+          gh label list
+          EOF
+          
+          # Codexに処理させる
+          codex --full-auto --quiet --model o3 "$(cat prompt.txt)"
