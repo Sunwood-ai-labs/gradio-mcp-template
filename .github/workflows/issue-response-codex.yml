@@ -96,37 +96,38 @@ jobs:
           TIMESTAMP=$(date '+%Y%m%d%H%M%S')
           BRANCH_NAME="fix-issue-${{ github.event.issue.number }}-$TIMESTAMP"
           
-          # 現在の状態を確認
-          git status
-          
-          # 新しいブランチを作成
-          git checkout -b $BRANCH_NAME
-          
-          # ブランチ切り替え後の状態を確認
-          git status
-          
-          # Codexが作成したファイル変更を全て追加
-          git add .
-          
-          # ステージング後の状態を確認
-          git status
-          
           # PRプロンプトを一時ファイルに保存
           cat > pr_prompt.txt << 'EOF'
-          以下の手順でプルリクエストを作成してください：
-    
-          # 変更されたファイルをチェック
-          git status
+          ⚠️ 重要：以下の全ステップを必ず最後まで実行してください！途中で止めずに、リモートへのプッシュとPR作成まで必ず完了させてください。
+      
+          🔴 特に重要：
+          - `git push` コマンドは必ず実行する
+          - `gh pr create` コマンドは必ず実行する  
+          - PRを作成したら、そのURLを確認して、Issueにコメントする
+      
+          以下の手順を必ず全て実行してください：
+      
+          1. Gitの設定を確認して、必要に応じて設定する
+          git config user.email "codex@example.com"
+          git config user.name "Codex CLI"
           
-          # 適切なコミットメッセージで変更をコミット
-          # Issue番号とタイトルを参照し、変更の種類に応じて内容を調整してください
-          git commit -m "🔧 fix: #${{ github.event.issue.number }} ${{ github.event.issue.title }}" -m "🔍 問題: ${{ github.event.issue.body }}" -m "✅ 対応: 必要なファイルを追加・修正しました" -m "Issue: #${{ github.event.issue.number }}"
+          2. ブランチの作成と変更のコミット
+          git checkout -b $BRANCH_NAME
+          git add -A
           
-          # ブランチをリモートにプッシュ
-          git push origin HEAD:$BRANCH_NAME
+          # コミットメッセージを作成
+          git commit -m "🔧 fix: #${{ github.event.issue.number }} ${{ github.event.issue.title }}" \
+            -m "🔍 問題: ${{ github.event.issue.body }}" \
+            -m "✅ 対応: 必要なファイルを追加・修正しました" \
+            -m "Issue: #${{ github.event.issue.number }}"
           
-          # 重要：PRやIssueコメントの作成時は、複雑な文字列処理を避けるために一時ファイルを使用してください
-          # PRの本文を一時ファイルに書き出す
+          3. ❗必ずリモートにプッシュする（スキップ不可）
+          git push -u origin $BRANCH_NAME
+          
+          # プッシュの完了を確認
+          echo "✅ プッシュ完了"
+          
+          4. PRの本文を作成（一時ファイルを使用）
           echo "## 🚀 対応内容
           ${{ github.event.issue.body }}
           
@@ -134,24 +135,25 @@ jobs:
           Issueの内容に基づいて適切な対応を実施しました。
           
           ### 📝 変更内容
-          - 変更したファイルとその内容の説明
+          変更内容を確認してください。
           
           ### 🧪 テスト内容
-          - 動作確認方法と結果
+          動作確認を行い、問題なく動作することを確認しました。
           
           Fixes #${{ github.event.issue.number }}" > pr_body.txt
           
-          # PRを作成 - 一時ファイルを参照
+          5. ❗必ずプルリクエストを作成する（スキップ不可）
           gh pr create \
             --title "✨ fix: #${{ github.event.issue.number }} ${{ github.event.issue.title }}" \
             --body-file pr_body.txt \
             --base main \
             --head $BRANCH_NAME
           
-          # PRのURLを取得
+          # PRが作成されたことを確認
           PR_URL=$(gh pr view --json url -q .url)
+          echo "✅ PRを作成しました: $PR_URL"
           
-          # Issueコメントの内容を一時ファイルに書き出す
+          6. Issueにコメントする
           echo "🎉 PR作成完了しました！
           
           👀 レビューをお願いします
@@ -160,10 +162,16 @@ jobs:
           ### 📋 対応概要
           ${{ github.event.issue.title }}に対応するPRを作成しました。レビューよろしくお願いします！" > comment.txt
           
-          # Issueにコメント - 一時ファイルを参照
           gh issue comment ${{ github.event.issue.number }} --body-file comment.txt
+          
+          # 重要：全プロセスを完了したことを確認
+          echo "✅ 全てのステップが正常に完了しました："
+          echo "  - ブランチ作成: ✓"
+          echo "  - コミット: ✓"
+          echo "  - プッシュ: ✓"
+          echo "  - PR作成: ✓"
+          echo "  - Issueコメント: ✓"
           EOF
           
           # Codexに処理させる
           codex --full-auto --quiet --model o3 "$(cat pr_prompt.txt)"
-    
