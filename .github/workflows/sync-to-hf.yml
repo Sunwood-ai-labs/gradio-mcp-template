@@ -18,5 +18,5 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git fetch https://MakiAi:$HF_TOKEN@huggingface.co/spaces/MakiAi/gradio-mcp-minimal main || true
-          git push --force https://MakiAi:$HF_TOKEN@huggingface.co/spaces/MakiAi/gradio-mcp-minimal main
+          git fetch https://MakiAi:$HF_TOKEN@huggingface.co/spaces/MakiAi/gradio-mcp-template main || true
+          git push --force https://MakiAi:$HF_TOKEN@huggingface.co/spaces/MakiAi/gradio-mcp-template main
