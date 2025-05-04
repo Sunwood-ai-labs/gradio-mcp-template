@@ -11,7 +11,7 @@ pinned: false
 
 <div align="center">
 
-![Image](https://github.com/user-attachments/assets/a48bdf11-baf1-4e6d-8f4f-10bc33a68551)
+![Image](https://github.com/user-attachments/assets/89233e89-d2e4-4e29-b1b8-fc5c90a7e4b2)
 
 
 # 🚀 **Gradio MCP Minimal**
