@@ -1,178 +1,18 @@
 name: Issue Response Bot (Codex with gh)
 
 on:
-  issues:
-    types: [opened, edited]
-  issue_comment:
-    types: [created]
+  workflow_dispatch:
 
-permissions:
-  issues: write
-  contents: write
-  pull-requests: write
+# Intentionally inactive until a least-privilege replacement is reviewed.
+permissions: {}
 
 jobs:
-
-  respond-to-issue:
+  automation-paused:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 1
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Install OpenAI Codex
-        run: npm install -g @openai/codex@0.1.2504251709
-        
-      - name: GitHub CLIをインストール
+      - name: Explain paused automation
+        shell: bash
         run: |
-          type -p curl >/dev/null || apt install curl -y
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-          && sudo apt update \
-          && sudo apt install gh -y
-          
-      - name: Post Initial Comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} --body '🚀 処理を開始します...
-
-          <details>
-          <summary>Codexへの指示内容</summary>
-
-          ```
-          以下のissueに対する対応計画を立て、ghコマンドでコメントしてください：
-          
-          Issue番号: #${{ github.event.issue.number }}
-          タイトル: ${{ github.event.issue.title }}
-          内容: ${{ github.event.issue.body }}
-          
-          実行してください：
-          1. issueを分析して対応方針を決定
-          2. ghコマンドで計画をissueにコメント (例: gh issue comment #番号 --body '"'"'内容'"'"')
-          3. 必要なコード修正やドキュメント更新を実施
-          ```
-          </details>'
-          
-      - name: Analyze and Plan
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          # プロンプトを一時ファイルに保存
-          cat > prompt.txt << 'EOF'
-          以下のissueに対する対応計画を立て、ghコマンドでコメントしてください：
-          
-          Issue番号: #${{ github.event.issue.number }}
-          タイトル: ${{ github.event.issue.title }}
-          本文: ${{ github.event.issue.body }}
-          
-          実行してください：
-          1. issueを分析して対応方針やTODOを決定
-          2. ghコマンドで計画・TODOをissueにコメント (必ず --body-file を使用)
-          3. 必要なコード修正やドキュメント更新を実施
-          
-          重要：複雑な文字列を扱う際は、エスケープ問題を避けるために一時ファイルを使用してください。
-          例えば、gh issue comment や gh pr create コマンドでは --body よりも --body-file を使用してください。
-          
-          以下のような方法で実装してください：
-          1. 本文内容をファイルに書き出す: echo '内容' > comment.txt
-          2. ファイルを参照: gh issue comment 番号 --body-file comment.txt
-          
-          特に改行を含む複雑な文字列を扱う場合は必ずこの方法を使用してください。
-          インラインでの複雑なエスケープ ($\' や \" の組み合わせ) は避けてください。
-          EOF
-          
-          # Codexに処理させる
-          codex --full-auto --quiet --model o3 "$(cat prompt.txt)"
-          
-      - name: Create PR
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          # タイムスタンプを生成 (YYYYMMDDHHmmss形式)
-          TIMESTAMP=$(date '+%Y%m%d%H%M%S')
-          BRANCH_NAME="fix-issue-${{ github.event.issue.number }}-$TIMESTAMP"
-          
-          # PRプロンプトを一時ファイルに保存
-          cat > pr_prompt.txt << 'EOF'
-          あなたはサンドボックス環境で動作しており、全権限を与えられています！
-          ⚠️ 重要：以下の全ステップを必ず最後まで実行してください！途中で止めずに、リモートへのプッシュとPR作成まで必ず完了させてください。
-      
-          🔴 特に重要：
-          - `git push` コマンドは必ず実行する
-          - `gh pr create` コマンドは必ず実行する  
-          - PRを作成したら、そのURLを確認して、Issueにコメントする
-      
-          以下の手順を必ず全て実行してください：
-      
-          1. Gitの設定を確認して、必要に応じて設定する
-          git config user.email "codex@example.com"
-          git config user.name "Codex CLI"
-          
-          2. ブランチの作成と変更のコミット
-          git checkout -b $BRANCH_NAME
-          git add -A
-          
-          # コミットメッセージを作成
-          git commit -m "🔧 fix: #${{ github.event.issue.number }} ${{ github.event.issue.title }}" \
-            -m "🔍 問題: ${{ github.event.issue.body }}" \
-            -m "✅ 対応: 必要なファイルを追加・修正しました" \
-            -m "Issue: #${{ github.event.issue.number }}"
-          
-          3. ❗必ずリモートにプッシュする（スキップ不可）
-          git push -u origin $BRANCH_NAME
-          
-          # プッシュの完了を確認
-          echo "✅ プッシュ完了"
-          
-          4. PRの本文を作成（一時ファイルを使用）
-          echo "## 🚀 対応内容
-          ${{ github.event.issue.body }}
-          
-          ### 🔍 問題と解決策
-          Issueの内容に基づいて適切な対応を実施しました。
-          
-          ### 📝 変更内容
-          変更内容を確認してください。
-          
-          ### 🧪 テスト内容
-          動作確認を行い、問題なく動作することを確認しました。
-          
-          Fixes #${{ github.event.issue.number }}" > pr_body.txt
-          
-          5. ❗必ずプルリクエストを作成する（スキップ不可）
-          gh pr create \
-            --title "✨ fix: #${{ github.event.issue.number }} ${{ github.event.issue.title }}" \
-            --body-file pr_body.txt \
-            --base main \
-            --head $BRANCH_NAME
-          
-          # PRが作成されたことを確認
-          PR_URL=$(gh pr view --json url -q .url)
-          echo "✅ PRを作成しました: $PR_URL"
-          
-          6. Issueにコメントする
-          echo "🎉 PR作成完了しました！
-          
-          👀 レビューをお願いします
-          🔗 PR: $PR_URL
-          
-          ### 📋 対応概要
-          ${{ github.event.issue.title }}に対応するPRを作成しました。レビューよろしくお願いします！" > comment.txt
-          
-          gh issue comment ${{ github.event.issue.number }} --body-file comment.txt
-          
-          # 重要：全プロセスを完了したことを確認
-          echo "✅ 全てのステップが正常に完了しました："
-          echo "  - ブランチ作成: ✓"
-          echo "  - コミット: ✓"
-          echo "  - プッシュ: ✓"
-          echo "  - PR作成: ✓"
-          echo "  - Issueコメント: ✓"
-          EOF
-          
-          # Codexに処理させる
-          codex --full-auto --quiet --model o3 "$(cat pr_prompt.txt)"
+          printf '%s\n' 'This legacy AI automation is paused pending a least-privilege replacement.' >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' 'No issue content, credentials, or repository checkout is processed by this workflow.' >> "$GITHUB_STEP_SUMMARY"
